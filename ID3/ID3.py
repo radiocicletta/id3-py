@@ -1,4 +1,4 @@
-# ID3.py version 1.0
+# ID3.py version 1.1
 
 # Module for manipulating ID3 informational tags in MP3 audio files
 # $Id$
@@ -30,9 +30,17 @@
 
 # Constructor:
 #
-#   ID3(filename)
-#     Opens filename and tries to parse its ID3 header. If the ID3 header
+#   ID3(file, filename='unknown filename')
+#     Opens file and tries to parse its ID3 header. If the ID3 header
 #     is invalid or the file access failed, raises InvalidTagError.
+#
+#     file can either be a string specifying a filename which will be
+#     opened in binary mode, or a file object.  If it's a file object,
+#     the filename should be passed in as the second argument to this
+#     constructor, otherwise file.name will be used in error messages
+#     (or 'unknown filename' if that's missing). Also, if it's a file
+#     object, it *must* be opened in r+ mode (or equivalent) to allow
+#     both reading and writing.
 #
 #     When object is deconstructed, if any of the class data (below) have
 #     been changed, opens the file again read-write and writes out the
@@ -95,7 +103,12 @@
 #     an integer from 0 to len(ID3.genres).
 #
 
-import string
+import string, types
+
+try:
+    string_types = [ types.StringType, types.UnicodeType ]
+except AttributeError:                  # if no unicode support
+    string_types = [ types.StringType ]
 
 def lengthen(string, num_spaces):
     string = string[:num_spaces]
@@ -146,8 +159,21 @@ class ID3:
 	"Merengue", "Salsa", "Thrash Metal", "Anime", "Jpop", "Synthpop" 
 	]
 
-    def __init__(self, filename):
-	self.filename = filename
+    def __init__(self, file, name='unknown filename'):
+        if type(file) in string_types:
+            self.filename = file
+        # We don't open in r+b if we don't have to, to allow read-only access
+            self.file = open(file, 'rb')
+            self.can_reopen = 1
+        elif hasattr(file, 'seek'): # assume it's an open file
+            if name == 'unknown filename' and hasattr(file, 'name'):
+                self.filename = file.name
+            else:
+                self.filename = name
+
+            self.file = file
+            self.can_reopen = 0
+            
 	self.delete_tag = 0
 	self.zero()
 	self.modified = 0
@@ -155,12 +181,11 @@ class ID3:
 	self.had_tag = 0
 	
 	try:
-	    self.file = open(filename, 'r')
 	    self.file.seek(-128, 2)
 
 	except IOError, msg:
 	    self.modified = 0
-	    raise InvalidTagError("Can't open %s: %s" % (filename, msg))
+	    raise InvalidTagError("Can't open %s: %s" % (self.filename, msg))
 	    return
 
 	try:
@@ -180,7 +205,6 @@ class ID3:
                     self.track = None
 
 		self.genre = ord(self.file.read(1))
-		self.file.close()
 
                 self.title = strip_padding(self.title)
                 self.artist = strip_padding(self.artist)
@@ -190,7 +214,7 @@ class ID3:
                 
 	except IOError, msg:
 	    self.modified = 0
-	    raise InvalidTagError("Invalid ID3 tag in %s: %s" % (filename, msg))
+	    raise InvalidTagError("Invalid ID3 tag in %s: %s" % (self.filename, msg))
 	self.modified = 0
 
     def delete(self):
@@ -223,7 +247,10 @@ class ID3:
     def write(self):
 	if self.modified:
 	    try:
-		self.file = open(self.filename, 'r+')
+                # We see if we can re-open in r+ mode now, as we need to write
+                if self.can_reopen:
+                    self.file = open(self.filename, 'r+b')
+
 		if self.had_tag:
                     self.file.seek(-128, 2)
                 else:
@@ -261,14 +288,14 @@ class ID3:
 			    self.genre = 255
 		        self.file.write(chr(self.genre))
                         self.had_tag = 1
-		self.file.close()
+		self.file.flush()
 	    except IOError, msg:
 		raise InvalidTagError("Cannot write modified ID3 tag to %s: %s" % (self.filename, msg))
 	    else:
 		self.modified = 0
 
     def __del__(self):
-	self.write()
+        self.write()
 
     def __str__(self):
 	if self.has_tag:

@@ -8,7 +8,7 @@ from distutils.core import setup
 
 setup (# Distribution meta-data
        name = "ID3",
-       version = "1.0",
+       version = "1.1",
        description = "Module for manipulating ID3 informational tags on MP3 audio files",
        author = "Ben Gertzfield",
        author_email = "che@debian.org",

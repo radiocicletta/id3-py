@@ -1,4 +1,4 @@
-README for ID3.py, version 1.0
+README for ID3.py, version 1.1
 
 Copyright (C) 1999, 2000 Ben Gertzfield <che@debian.org>
 --------------------------------------------------------
@@ -31,7 +31,12 @@ destroyed) writes out the changes to the file.
 
 from ID3 import *
     try:
-        id3info = ID3('/some/file/moxy.mp3')
+	filename = '/some/path/moxy.mp3'
+        id3info = ID3(filename)
+
+        # alternatively, can pass in a file or equivalent if opened in r+b mode
+	# id3info = ID3(open(filename, 'r+b'), filename)
+
         print id3info
         id3info.title = "Green Eggs and Ham"
         id3info.artist = "Moxy Früvous"

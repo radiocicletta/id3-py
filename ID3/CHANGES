@@ -1,3 +1,19 @@
+v1.1
+----
+
+23 December 2000: Overload the ID3 constructor to allow passing in
+either a filename *or* an already-opened file along with a filename.
+
+Make sure we open the file in r+b mode if we're given a filename,
+to make Windows (and VMS? *grin*) folks happy.
+
+No longer repeatedly opens/closes files; instead just opens in r+b
+mode right at the beginning and does flush() if necessary to make sure
+we have the old functionality.
+
+Changed example id3-tagger.py to properly do an explicit ID3.write()
+call if something's changed, to catch and print exceptions nicely.
+
 v1.0
 ----
 

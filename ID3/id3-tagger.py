@@ -3,7 +3,7 @@
 # ID3 module example program
 # $Id$
        
-# version 1.0
+# version 1.1
 # written 2 May 1999 by Ben Gertzfield <che@debian.org>
 
 # This program is released under the GNU GPL, version 2 or later.
@@ -11,7 +11,7 @@
 import getopt, string, re, sys
 from ID3 import *
 
-version = 1.0
+version = 1.1
 name = 'id3-tagger.py'
 
 def usage():
@@ -65,6 +65,11 @@ def main():
 	try:
 	    id3info = ID3(file)
 
+            needs_write = 0
+
+            if len(options.keys()) > 0:
+                needs_write = 1
+            
 	    if options.has_key('title'):
 		id3info.title = options['title']
 	    if options.has_key('artist'):
@@ -84,6 +89,9 @@ def main():
 		id3info.delete()
 
 	    print id3info
+
+            if needs_write:
+                id3info.write()
 
 	except InvalidTagError, msg:
 	    print "Invalid ID3 tag:", msg
