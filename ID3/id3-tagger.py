@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 # ID3 module example program
-
+# $Id$
+       
 # version 1.0
 # written 2 May 1999 by Ben Gertzfield <che@debian.org>
 
