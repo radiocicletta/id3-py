@@ -1,0 +1,27 @@
+v1.0
+----
+
+21 September 2000: First 1.0 release. Add ID3 v1.1 support (the last
+byte of the Comments field is considered to be a track number if the
+previous byte is non-null).
+
+Add whitespace/null stripping to the end of all fields. If this breaks
+anything, please let me know! I shouldn't assume this, but I figure
+it'd be nice for folks not to have to do this on their own. I'll take
+it out if it causes problems.
+
+Write a README, COPYING, CHANGES file, and add a setup.py for
+Distutils and Python 1.6 users.
+
+v0.6
+----
+
+11 June 1999: Fix from Arne Zellentin (arne@unix-ag.org) to prevent
+wiping out the last 128 bytes of MP3 files that don't already have an
+ID3 tag. Oops!
+
+
+0.5
+---
+
+2 May 1999: Initial release. 
