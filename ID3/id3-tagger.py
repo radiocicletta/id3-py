@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
+# ID3 module example program
+
+# version 1.0
+# written 2 May 1999 by Ben Gertzfield <che@debian.org>
+
+# This program is released under the GNU GPL, version 2 or later.
+
 import getopt, string, re, sys
 from ID3 import *
 
-version = 0.1
+version = 1.0
 name = 'id3-tagger.py'
 
 def usage():
