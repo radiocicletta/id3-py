@@ -1,4 +1,4 @@
-# ID3.py version 1.1
+# ID3.py version 1.2
 
 # Module for manipulating ID3 informational tags in MP3 audio files
 # $Id$
@@ -30,7 +30,7 @@
 
 # Constructor:
 #
-#   ID3(file, filename='unknown filename')
+#   ID3(file, filename='unknown filename', as_tuple=0)
 #     Opens file and tries to parse its ID3 header. If the ID3 header
 #     is invalid or the file access failed, raises InvalidTagError.
 #
@@ -41,6 +41,10 @@
 #     (or 'unknown filename' if that's missing). Also, if it's a file
 #     object, it *must* be opened in r+ mode (or equivalent) to allow
 #     both reading and writing.
+#
+#     If as_tuple is true, the dictionary interface to ID3 will return
+#     tuples containing one string each instead of a string, for
+#     compatibility with the ogg.vorbis module.
 #
 #     When object is deconstructed, if any of the class data (below) have
 #     been changed, opens the file again read-write and writes out the
@@ -58,13 +62,24 @@
 #   30 characters in length. If a field is set to a string longer than
 #   the maximum, it will be truncated when it's written to disk.
 #
-#   ID3.title
+#   As of ID3 version 1.2, there are two interfaces to this data.
+#   You can use the direct interface or the dictionary-based interface.
+#   The normal dictionary methods (has_key, get, keys, values, items, etc.)
+#   should work on an ID3 object.  You can assign values to either the
+#   dictionary interface or the direct interface, and they will both
+#   reflect the changes.
+#
+#   If any of the fields are not defined in the ID3 tag, the dictionary
+#   based interface will not contain a key for that field!  Test with
+#   ID3.has_key('ARTIST') etc. first.
+#
+#   ID3.title or ID3['TITLE']
 #     Title of the song.
-#   ID3.artist
+#   ID3.artist or ID3['ARTIST']
 #     Artist/creator of the song.
-#   ID3.album
+#   ID3.album or ID3['ALBUM']
 #     Title of the album the song is from.
-#   ID3.year
+#   ID3.year or ID3['YEAR']
 #     Year the song was released. Maximum of 4 characters (Y10K bug!)
 #   ID3.genre
 #     Genre of the song. Integer value from 0 to 255. Genre specification
@@ -72,10 +87,16 @@
 #     has a list of current genres; I spell-checked this list against
 #     WinAMP's by running strings(1) on the file Winamp/Plugins/in_mp3.dll 
 #     and made a few corrections.
-#   ID3.comment
+#   ID3['GENRE']
+#     String value corresponding to the integer in ID3.genre.  If there
+#     is no genre string available for the ID3.genre number, this will
+#     be set to "Unknown Genre".
+#   ID3.comment or ID3['COMMENT']
 #     Comment about the song.
-#   ID3.track
+#   ID3.track or ID3['TRACKNUMBER']
 #     Track number of the song. None if undefined.
+#     NOTE: ID3['TRACKNUMBER'] will return a *string* containing the
+#     track number, for compatibility with ogg.vorbis.
 #
 #   ID3.genres
 #     List of all genres. ID3.genre above is used to index into this
@@ -102,12 +123,21 @@
 #     ID3.genres table. The search is performed case-insensitively. Returns
 #     an integer from 0 to len(ID3.genres).
 #
+#   legal_genre(genre_number)
+#     Checks if genre_number is a legal index into ID3.genres.  Returns
+#     true if so, false otherwise.
+#
+#   as_dict()
+#     Returns just the dictionary containing the ID3 tag fields.
+#     See the notes above for the dictionary interface.
+#
 
 import string, types
 
 try:
     string_types = [ types.StringType, types.UnicodeType ]
 except AttributeError:                  # if no unicode support
+
     string_types = [ types.StringType ]
 
 def lengthen(string, num_spaces):
@@ -231,6 +261,8 @@ class ID3:
         if self.comment: self.d["COMMENT"] = self.tupleize(self.comment)
         if self.legal_genre(self.genre):
             self.d["GENRE"] = self.tupleize(self.genres[self.genre])
+        else:
+            self.d["GENRE"] = self.tupleize("Unknown Genre")
         if self.track: self.d["TRACKNUMBER"] = self.tupleize(str(self.track))
 
     def delete(self):
@@ -249,7 +281,7 @@ class ID3:
         self.setup_dict()
         
     def tupleize(self, s):
-        if self.as_tuple:
+        if self.as_tuple and type(s) is not types.TupleType:
             return (s,)
         else:
             return s
@@ -355,9 +387,12 @@ class ID3:
 	if not key in ['TITLE', 'ARTIST', 'ALBUM', 'YEAR', 'COMMENT',
                        'TRACKNUMBER', 'GENRE']:
             return
-        if k == 'TRACKNUMBER' and type(v) is types.IntType:
-            self.track = v
-            self.d[k] = self.tupleize(`v`)
+        if k == 'TRACKNUMBER':
+            if type(v) is types.IntType:
+                self.track = v
+            else:
+                self.track = string.atoi(v)
+            self.d[k] = self.tupleize(str(v))
         elif k == 'GENRE':
             if type(v) is types.IntType:
                 if self.legal_genre(v):
@@ -367,12 +402,14 @@ class ID3:
                     self.genre = v
                     self.d[k] = self.tupleize("Unknown Genre")
             else:
-                self.genre = self.find_genre(`v`)
+                self.genre = self.find_genre(str(v))
                 if self.genre == -1:
+                    print v, "not found"
                     self.genre = 255
                     self.d[k] = self.tupleize("Unknown Genre")
                 else:
-                    self.d[k] = self.tupleize(`v`)
+                    print self.genre, v
+                    self.d[k] = self.tupleize(str(v))
         else:
             self.__dict__[string.lower(key)] = v
             self.d[k] = self.tupleize(v)
@@ -384,7 +421,8 @@ class ID3:
 
     def __str__(self):
 	if self.has_tag:
-	    if self.genre != None and self.genre > 0 and self.genre < len(self.genres):
+	    if self.genre != None and self.genre >= 0 and \
+                   self.genre < len(self.genres):
 		genre = self.genres[self.genre]
 	    else:
 		genre = 'Unknown'
@@ -405,7 +443,7 @@ class ID3:
 	    self.__dict__['modified'] = 1
 	    self.__dict__['has_tag'] = 1
             if name == 'track':
-                self.__dict__['d']['TRACKNUMBER'] = self.tupleize(`value`)
+                self.__dict__['d']['TRACKNUMBER'] = self.tupleize(str(value))
             elif name == 'genre':
                 if self.legal_genre(value):
                     self.__dict__['d']['GENRE'] = self.tupleize(self.genres[value])

@@ -1,3 +1,14 @@
+v1.2
+----
+
+5 April 2002: New dictionary-based interface, compatible with
+ogg.vorbis module.
+
+Default genre will be 255 if not specified, not 0 ("Blues").
+
+Rewrote id3-tagger.py to use new dictionary-based interface
+(simplifies code a lot).
+
 v1.1
 ----
 

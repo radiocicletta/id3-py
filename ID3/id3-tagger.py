@@ -3,7 +3,7 @@
 # ID3 module example program
 # $Id$
        
-# version 1.1
+# version 1.2
 # written 2 May 1999 by Ben Gertzfield <che@debian.org>
 
 # This program is released under the GNU GPL, version 2 or later.
@@ -11,14 +11,14 @@
 import getopt, string, re, sys
 from ID3 import *
 
-version = 1.1
+version = 1.2
 name = 'id3-tagger.py'
 
 def usage():
     sys.stderr.write(
 "This is %s version %0.1f, a tool for setting ID3 tags in MP3 files.\n\n\
 Usage: %s [-t title] [-a artist] [-A album] [-y year] [-c comment] \n\
-       %s [-g genre] [-d] [-h] [-v] file1 [file2 ...]\n\n\
+       %s [-g genre] [-T tracknum] [-d] [-h] [-v] file1 [file2 ...]\n\n\
 -d: Delete the ID3 tag from specified file(s) completely\n\
 -h: Display this text\n\
 -v: Display the version of this program\n\n\
@@ -29,7 +29,7 @@ def main():
     options = {}
 
     try:
-	opts, args = getopt.getopt(sys.argv[1:], 't:a:A:y:c:g:dhvl')
+	opts, args = getopt.getopt(sys.argv[1:], 't:a:A:y:c:g:T:dhvl')
     except getopt.error, msg:
 	print msg
 	usage()
@@ -43,17 +43,19 @@ def main():
 	    usage()
 	    sys.exit(0)
 	if opt == '-t':
-	    options['title'] = arg
+	    options['TITLE'] = arg
 	if opt == '-a':
-	    options['artist'] = arg
+	    options['ARTIST'] = arg
 	if opt == '-A':
-	    options['album'] = arg
+	    options['ALBUM'] = arg
 	if opt == '-y':
-	    options['year'] = arg
+	    options['YEAR'] = arg
 	if opt == '-c':
-	    options['comment'] = arg
+	    options['COMMENT'] = arg
 	if opt == '-g':
-	    options['genre'] = arg
+	    options['GENRE'] = arg
+        if opt == '-T':
+            options['TRACKNUMBER'] = arg
 	if opt == '-d':
 	    options['delete'] = 1
 
@@ -69,22 +71,13 @@ def main():
 
             if len(options.keys()) > 0:
                 needs_write = 1
-            
-	    if options.has_key('title'):
-		id3info.title = options['title']
-	    if options.has_key('artist'):
-		id3info.artist = options['artist']
-	    if options.has_key('album'):
-		id3info.album = options['album']
-	    if options.has_key('year'):
-		id3info.year = options['year']
-	    if options.has_key('comment'):
-		id3info.comment = options['comment']
-	    if options.has_key('genre'):
-		if re.match('^\d+$', options['genre']):
-		    id3info.genre = int(options['genre'])
-		else:
-		    id3info.genre = id3info.find_genre(options['genre'])
+
+            for k, v in options.items():
+                if k == 'GENRE' and re.match("\d+$", v):
+                    id3info[k] = string.atoi(v)
+                else:
+                    id3info[k] = v
+
 	    if options.has_key('delete'):
 		id3info.delete()
 
