@@ -1,7 +1,13 @@
+# ID3.py version 0.6
+
 # Module for manipulating ID3 informational tags in MP3 audio files
 
 # Written 2 May 1999 by Ben Gertzfield <che@debian.org>
 # This work is released under the GNU GPL, version 2 or later.
+
+# Modified 10 June 1999 by Arne Zellentin <arne@unix-ag.org> to
+# fix bug with overwriting last 128 bytes of a file without an
+# ID3 tag
 
 # This is the first thing I've ever written in Python, so bear with
 # me if it looks terrible. In a few years I'll probably look back at
@@ -69,8 +75,7 @@
 #   find_genre(genre_string)
 #     Searches for the numerical value of the given genre string in the
 #     ID3.genres table. The search is performed case-insensitively. Returns
-#     an integer from 0 to len(ID3.genres) or 255 if genre_string is not
-#     found.
+#     an integer from 0 to len(ID3.genres).
 #
 
 import string
@@ -85,38 +90,38 @@ class InvalidTagError:
     def __str__(self):
 	return self.msg
 
-class ID3: 
+class ID3:
+    InvalidTagError = 'InvalidTagError'
 
     genres = [ 
-    "Blues", "Classic Rock", "Country", "Dance", "Disco", "Funk",
-    "Grunge", "Hip-Hop", "Jazz", "Metal", "New Age", "Oldies", "Other",
-    "Pop", "R&B", "Rap", "Reggae", "Rock", "Techno", "Industrial",
-    "Alternative", "Ska", "Death Metal", "Pranks", "Soundtrack",
-    "Euro-Techno", "Ambient", "Trip-Hop", "Vocal", "Jazz+Funk", "Fusion",
-    "Trance", "Classical", "Instrumental", "Acid", "House", "Game",
-    "Sound Clip", "Gospel", "Noise", "Alt. Rock", "Bass", "Soul",
-    "Punk", "Space", "Meditative", "Instrumental Pop", "Instrumental Rock", 
-    "Ethnic", "Gothic", "Darkwave", "Techno-Industrial",
-    "Electronic", "Pop-Folk", "Eurodance", "Dream", "Southern Rock",
-    "Comedy", "Cult", "Gangsta", "Top 40", "Christian Rap",
-    "Pop/Funk", "Jungle", "Native American", "Cabaret", "New Wave",
-    "Psychedelic", "Rave", "Showtunes", "Trailer", "Lo-Fi", "Tribal",
-    "Acid Punk", "Acid Jazz", "Polka", "Retro", "Musical", "Rock & Roll", 
-    "Hard Rock", "Folk", "Folk/Rock", "National Folk", "Swing",
-    "Fusion", "Bebob", "Latin", "Revival", "Celtic", "Bluegrass",
-    "Avantgarde", "Gothic Rock", "Progress. Rock", "Psychedelic Rock",
-    "Symphonic Rock", "Slow Rock", "Big Band", "Chorus", "Easy Listening", 
-    "Acoustic", "Humour", "Speech", "Chanson", "Opera",
-    "Chamber Music", "Sonata", "Symphony", "Booty Bass", "Primus",
-    "Porn Groove", "Satire", "Slow Jam", "Club", "Tango", "Samba",
-    "Folklore", "Ballad", "Power Ballad", "Rhythmic Soul",
-    "Freestyle", "Duet", "Punk Rock", "Drum Solo", "A Capella",
-    "Euro-House", "Dance Hall", "Goa", "Drum & Bass", "Club-House",
-    "Hardcore", "Terror", "Indie", "BritPop", "Negerpunk", "Polsk Punk", 
-    "Beat", "Christian Gangsta Rap", "Heavy Metal", "Black Metal", 
-    "Crossover", "Contemporary Christian", "Christian Rock",
-    "Merengue", "Salsa", "Thrash Metal", "Anime", "Jpop", "Synthpop" 
-    ]
+	"Blues", "Classic Rock", "Country", "Dance", "Disco", "Funk", 
+	"Grunge", "Hip-Hop", "Jazz", "Metal", "New Age", "Oldies", "Other", 
+	"Pop", "R&B", "Rap", "Reggae", "Rock", "Techno", "Industrial", 
+	"Alternative", "Ska", "Death Metal", "Pranks", "Soundtrack", 
+	"Euro-Techno", "Ambient", "Trip-Hop", "Vocal", "Jazz+Funk", "Fusion", 
+	"Trance", "Classical", "Instrumental", "Acid", "House", "Game", 
+	"Sound Clip", "Gospel", "Noise", "Alt. Rock", "Bass", "Soul", 
+	"Punk", "Space", "Meditative", "Instrum. Pop", "Instrum. Rock", 
+	"Ethnic", "Gothic", "Darkwave", "Techno-Indust.", "Electronic", 
+	"Pop-Folk", "Eurodance", "Dream", "Southern Rock", "Comedy", 
+	"Cult", "Gangsta", "Top 40", "Christian Rap", "Pop/Funk", "Jungle", 
+	"Native American", "Cabaret", "New Wave", "Psychadelic", "Rave", 
+	"Showtunes", "Trailer", "Lo-Fi", "Tribal", "Acid Punk", "Acid Jazz", 
+	"Polka", "Retro", "Musical", "Rock & Roll", "Hard Rock", "Folk", 
+	"Folk/Rock", "National Folk", "Swing", "Fusion", "Bebob", "Latin", 
+	"Revival", "Celtic", "Bluegrass", "Avantgarde", "Gothic Rock", 
+	"Progress. Rock", "Psychadel. Rock", "Symphonic Rock", "Slow Rock", 
+	"Big Band", "Chorus", "Easy Listening", "Acoustic", "Humour", 
+	"Speech", "Chanson", "Opera", "Chamber Music", "Sonata", "Symphony", 
+	"Booty Bass", "Primus", "Porn Groove", "Satire", "Slow Jam", 
+	"Club", "Tango", "Samba", "Folklore", "Ballad", "Power Ballad", 
+	"Rhythmic Soul", "Freestyle", "Duet", "Punk Rock", "Drum Solo", 
+	"A Capella", "Euro-House", "Dance Hall", "Goa", "Drum & Bass", 
+	"Club-House", "Hardcore", "Terror", "Indie", "BritPop", "Negerpunk", 
+	"Polsk Punk", "Beat", "Christian Gangsta Rap", "Heavy Metal", 
+	"Black Metal", "Crossover", "Contemporary Christian", "Christian Rock",
+	"Merengue", "Salsa", "Thrash Metal", "Anime", "Jpop", "Synthpop" 
+	]
 
     def __init__(self, filename):
 	self.filename = filename
@@ -124,6 +129,7 @@ class ID3:
 	self.zero()
 	self.modified = 0
 	self.has_tag = 0
+	self.had_tag = 0
 	
 	try:
 	    self.file = open(filename, 'r')
@@ -137,6 +143,7 @@ class ID3:
 	try:
 	    if self.file.read(3) == 'TAG':
 		self.has_tag = 1
+		self.had_tag = 1
 		self.title = self.file.read(30)
 		self.artist = self.file.read(30)
 		self.album = self.file.read(30)
@@ -171,7 +178,7 @@ class ID3:
 		break
 	    i = i + 1
 	if i == len(self.genres):
-	    return 255
+	    return -1
 	else:
 	    return i
 
@@ -179,19 +186,33 @@ class ID3:
 	if self.modified:
 	    try:
 		self.file = open(self.filename, 'r+')
-		self.file.seek(-128, 2)
-		if self.delete_tag:
+		if self.had_tag:
+                    self.file.seek(-128, 2)
+                else:
+                    self.file.seek(0, 2) # a new tag is appended at the end
+		if self.delete_tag and self.had_tag:
 		    self.file.truncate()
+                    self.had_tag = 0
 		elif self.has_tag:
-		    self.file.write('TAG')
-		    self.file.write(lengthen(self.title, 30))
-		    self.file.write(lengthen(self.artist, 30))
-		    self.file.write(lengthen(self.album, 30))
-		    self.file.write(lengthen(self.year, 4))
-		    self.file.write(lengthen(self.comment, 30))
-		    if self.genre < 0 or self.genre > 255:
-			self.genre = 255
-		    self.file.write(chr(self.genre))
+                    go_on = 1
+                    if self.had_tag:
+                        if self.file.read(3) == "TAG":
+                            self.file.seek(-128, 2)
+                        else:
+                            # someone has changed the file in the mean time
+                            go_on = 0
+                            raise IOError("File has been modified, losing tag changes")
+                    if go_on:
+		        self.file.write('TAG')
+		        self.file.write(lengthen(self.title, 30))
+		        self.file.write(lengthen(self.artist, 30))
+		        self.file.write(lengthen(self.album, 30))
+		        self.file.write(lengthen(self.year, 4))
+		        self.file.write(lengthen(self.comment, 30))
+		        if self.genre < 0 or self.genre > 255:
+			    self.genre = 255
+		        self.file.write(chr(self.genre))
+                        self.had_tag = 1
 		self.file.close()
 	    except IOError, msg:
 		raise InvalidTagError("Cannot write modified ID3 tag to %s: %s" % (self.filename, msg))
@@ -208,10 +229,7 @@ class ID3:
 	    else:
 		genre = 'Unknown'
 
-	    return """File   : %s
-Title  : %-30.30s  Artist: %-30.30s
-Album  : %-30.30s  Year  : %-4.4s
-Comment: %-30.30s  Genre : %s (%i)""" % (self.filename, self.title, self.artist, self.album, self.year, self.comment, genre, self.genre)
+	    return "File   : %s\nTitle  : %-30.30s  Artist: %-30.30s\nAlbum  : %-30.30s  Year  : %-4.4s\nComment: %-30.30s  Genre : %s (%i)" % (self.filename, self.title, self.artist, self.album, self.year, self.comment, genre, self.genre)
 	else:
 	    return "%s: No ID3 tag." % self.filename
 
