@@ -378,20 +378,29 @@ class ID3:
 
     def values(self):
         if self.as_tuple:
-            return [x[0] for x in list(self.d.values())]
-        return list(self.d.values())
+            return [x[0].decode() for x in list(self.d.values())]
+        return [x.decode() for x in list(self.d.values())]
 
     def has_key(self, k):
         return k in self.d
 
     def get(self, k, x=None):
         if k in self.d:
-            return self.d[k]
+            return self.d[k].decode()
         else:
             return x
 
+    def __getattr__(self, k, x=None):
+        if k in self.d:
+            return self.d[k].decode()
+        else:
+            try:
+                return self.__getattribute__(k)
+            except AttributeError:
+                return x
+
     def __getitem__(self, k):
-        return self.d[k]
+        return self.d[k].decode()
 
     def __setitem__(self, k, v):
 
@@ -430,6 +439,7 @@ class ID3:
         self.write()
 
     def __str__(self):
+        print("!!!!!!")
         if self.has_tag:
             if self.genre is not None and int.from_bytes(self.genre, "big") >= 0 and \
                    int.from_bytes(self.genre, "big") < len(self.genres):
