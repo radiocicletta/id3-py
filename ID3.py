@@ -435,12 +435,12 @@ class ID3:
                    int.from_bytes(self.genre, "big") < len(self.genres):
                 genre = self.genres[int.from_bytes(self.genre, "big")]
             else:
-                genre = 'Unknown'
+                genre = b'Unknown'
 
             if self.track is not None:
                 track = str(self.track)
             else:
-                track = 'Unknown'
+                track = b'Unknown'
 
             return "File   : %s\nTitle  : %-30.30s  Artist: %-30.30s\nAlbum  : %-30.30s  Track : %s  Year: %-4.4s\nComment: %-30.30s  Genre : %s (%i)" % (self.filename, self.title, self.artist, self.album, track, self.year, self.comment, genre, int.from_bytes(self.genre, "big"))
         return "%s: No ID3 tag." % self.filename
