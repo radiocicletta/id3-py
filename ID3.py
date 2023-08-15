@@ -134,6 +134,8 @@
 
 import string
 import locale
+from typing import Any, Union, cast, Dict
+from io import BufferedReader
 
 try:
     string_types = [bytes, str]
@@ -142,13 +144,13 @@ except AttributeError:                  # if no unicode support
     string_types = [bytes]
 
 
-def lengthen(string, num_spaces):
+def lengthen(string: bytes, num_spaces: int) -> bytes:
     string = string[:num_spaces]
     return string + (b' ' * (num_spaces - len(string)))
 
 
 # We would normally use string.rstrip(), but that doesn't remove \0 characters.
-def strip_padding(s):
+def strip_padding(s: bytes) -> bytes:
     while len(s) > 0 and s[-1] in (string.whitespace + "\0").encode():
         s = s[:-1]
 
@@ -156,7 +158,7 @@ def strip_padding(s):
 
 
 class InvalidTagError(BaseException):
-    def __init__(self, msg):
+    def __init__(self, msg: str):
         self.msg = msg
 
     def __str__(self):
@@ -195,11 +197,11 @@ class ID3:
         "Merengue", "Salsa", "Thrash Metal", "Anime", "Jpop", "Synthpop"
         ]
 
-    def __init__(self, file, name='unknown filename', as_tuple=0):
+    def __init__(self, file: Union[str, bytes, BufferedReader], name: str='unknown filename', as_tuple:int=0):
         if type(file) in string_types:
             self.filename = file
         # We don't open in r+b if we don't have to, to allow read-only access
-            self.file = open(file, 'rb')
+            self.file = open(cast(str, file), 'rb')
             self.can_reopen = 1
         elif hasattr(file, 'seek'):  # assume it's an open file
             if name == 'unknown filename' and hasattr(file, 'name'):
@@ -207,10 +209,10 @@ class ID3:
             else:
                 self.filename = name
 
-            self.file = file
+            self.file = cast(BufferedReader, file)
             self.can_reopen = 0
 
-        self.d = {}
+        self.d: Dict[str, Any] = {}
         self.as_tuple = as_tuple
         self.delete_tag = 0
         self.zero()
@@ -223,7 +225,7 @@ class ID3:
 
         except IOError as msg:
             self.modified = 0
-            raise InvalidTagError("Can't open %s: %s" % (self.filename, msg))
+            raise InvalidTagError("Can't open %s: %s" % (str(self.filename), msg))
             return
 
         try:
@@ -240,7 +242,7 @@ class ID3:
                     self.track = self.comment[-1]
                     self.comment = self.comment[:-2]
                 else:
-                    self.track = None
+                    self.track = None # type: ignore
 
                 self.genre = self.file.read(1)
 
@@ -256,7 +258,7 @@ class ID3:
             self.modified = 0
             raise InvalidTagError(
                 "Invalid ID3 tag in %s: %s" % (
-                    self.filename,
+                    str(self.filename),
                     msg)
             )
         self.modified = 0
@@ -295,12 +297,12 @@ class ID3:
         self.genre = 255  # 'unknown', not 'blues'
         self.setup_dict()
 
-    def tupleize(self, s):
+    def tupleize(self, s: Any) -> tuple:
         if self.as_tuple and not isinstance(s, tuple):
             return (s,)
         return s
 
-    def find_genre(self, genre_to_find):
+    def find_genre(self, genre_to_find:Union[str, bytes]):
         i = 0
         find_me = str(genre_to_find).lower()
 
@@ -312,7 +314,7 @@ class ID3:
             return -1
         return i
 
-    def legal_genre(self, genre):
+    def legal_genre(self, genre: Any):
         if isinstance(genre, int) and 0 <= genre < len(self.genres):
             return 1
         return 0
@@ -384,13 +386,13 @@ class ID3:
     def has_key(self, k):
         return k in self.d
 
-    def get(self, k, x=None):
+    def get(self, k: str, x: Any=None):
         if k in self.d:
             return self.d[k].decode()
         else:
             return x
 
-    def __getattr__(self, k, x=None):
+    def __getattr__(self, k:str, x:Any=None):
         if k in self.d:
             return self.d[k].decode()
         else:
@@ -399,10 +401,10 @@ class ID3:
             except AttributeError:
                 return x
 
-    def __getitem__(self, k):
+    def __getitem__(self, k:str):
         return self.d[k].decode()
 
-    def __setitem__(self, k, v):
+    def __setitem__(self, k:str, v:Any):
 
         if k not in ['TITLE', 'ARTIST', 'ALBUM', 'YEAR', 'COMMENT', 'TRACKNUMBER', 'GENRE']:
             return
@@ -415,16 +417,16 @@ class ID3:
         elif k == 'GENRE':
             if isinstance(v, int):
                 if self.legal_genre(v):
-                    self.genre = v
-                    self.d[k] = self.tupleize(self.genres[v])
+                    self.genre = v # type: ignore
+                    self.d[k] = self.tupleize(self.genres[cast(int, v)])
                 else:
-                    self.genre = v
+                    self.genre = v # type: ignore
                     self.d[k] = self.tupleize(b"Unknown Genre")
             else:
                 self.genre = self.find_genre(v)
                 if self.genre == -1:
                     print(v, "not found")
-                    self.genre = 255
+                    self.genre = 255 # type: ignore
                     self.d[k] = self.tupleize(b"Unknown Genre")
                 else:
                     print(self.genre, v)
@@ -456,7 +458,7 @@ class ID3:
         return "%s: No ID3 tag." % self.filename
 
     # intercept setting of attributes to set self.modified
-    def __setattr__(self, name, value):
+    def __setattr__(self, name:str, value:Any):
         if name in ['title', 'artist', 'album', 'year', 'comment',
                     'track', 'genre']:
             self.__dict__['modified'] = 1
